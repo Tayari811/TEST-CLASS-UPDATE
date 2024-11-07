@@ -1,0 +1,180 @@
+public with sharing class LQ_MultiSelectLookupController {
+    /*
+    *Author : Vidya Chirlanchi
+    *Date: Nov 6 2020
+     */
+    //Starting method to get main application list which user has.
+    @AuraEnabled
+    public static List<my_apps__x> isValidBNSFId(String userID){
+        try
+        {
+            List<my_apps__x> myAppsResult = new List<my_apps__x>();
+            List<String>existingApps = new List<String>();
+            //get main application api name from Main Application Custom metadata
+            for(Main_Application__mdt mainAppObj:[Select Api_Name__c from Main_Application__mdt]){
+                existingApps.add(mainAppObj.Api_Name__c);
+            }
+            List<User> userFederationIdList= new List<User>();
+            if(userID != null){
+                userFederationIdList =  [SELECT FederationIdentifier from User where FederationIdentifier =:userID];
+                if(userFederationIdList != null && userFederationIdList.size() >0 ){
+                        myAppsResult = [SELECT name__c, indicator__c, url__c, bnsfrelationship__c, company__c, email__c, mobile__c, smsAuthorized__c, speciality__c, title__c, username__c FROM my_apps__x WHERE input_userid__c=:userID and name__c In :existingApps and indicator__c != 'NA' ORDER BY indicator__c ASC];
+                        system.debug('in if my result'+myAppsResult);
+                    }
+                    else{
+                        my_apps__x dummyObj = new my_apps__x(name__c='Not valid Coworker Id');
+                        myAppsResult.add(dummyObj);
+                    }
+            }
+            return myAppsResult;
+        }
+        catch(exception e)
+        {
+            system.debug(e.getMessage());
+            return null;
+        }
+    }
+    //END of method to get main application list which user has.
+    //Starting method to get all addition application list fron BNSF APplication Object
+    @AuraEnabled
+    public static List<BNSF_Application__c> getAdditionalApplication(){
+           List<BNSF_Application__c> additionalAppList = new List<BNSF_Application__c>();
+           additionalAppList = [Select id,Name from BNSF_Application__c];
+           return additionalAppList;
+
+    } 
+
+    @AuraEnabled
+    public static boolean checkApplicationAccessRequest(String additionalAccessPrimary) {
+        try {
+            // Log the value of selectedWebtool
+            System.debug('Selected Webtool: ' + additionalAccessPrimary);
+    
+            // Check if the contact has an Application_Access_Request__c object
+            User usr = [SELECT id, contactId FROM User WHERE id = :UserInfo.getUserId() LIMIT 1];
+            Contact contactObj = [SELECT id, email, Name FROM Contact WHERE Id = :usr.ContactId LIMIT 1];
+            List<Application_Access_Request__c> accessRequests = [
+                SELECT Id, Manage_Various_Freight_Invoices__c, Pay_Storage_Fees__c, Order_Railcars__c, 
+                       Create_Or_Submit_Billing__c, Switch_Or_In_Release_Rail_Cars__c, Manage_Demurrage_Invoices__c, CreatedDate
+                FROM Application_Access_Request__c
+                WHERE Customer__c = :contactObj.id
+            ];
+
+            // Calculate the date 14 days ago
+            Date fourteenDaysAgo = Date.today().addDays(-14);
+    
+            // Iterate through the access requests to check the conditions
+            for (Application_Access_Request__c request : accessRequests) {
+                if ((request.Manage_Various_Freight_Invoices__c) && additionalAccessPrimary == 'Account Status' || 
+                    (request.Pay_Storage_Fees__c) && additionalAccessPrimary == 'Intermodal Storage' || 
+                    (request.Order_Railcars__c) && additionalAccessPrimary == 'Railcar Equipment Request' ||
+                    (request.Order_Railcars__c) && additionalAccessPrimary == 'Railcar Management Tool' || 
+                    (request.Create_Or_Submit_Billing__c) && additionalAccessPrimary == 'Shipping Instructions' || 
+                    (request.Create_Or_Submit_Billing__c) && additionalAccessPrimary == 'Shipping Instructions Hazardous' || 
+                    (request.Switch_Or_In_Release_Rail_Cars__c) && additionalAccessPrimary == 'Switch Or In Release Rail Cars'|| 
+                    (request.Manage_Demurrage_Invoices__c) && additionalAccessPrimary == 'Customer Dwell Management Tool') {
+                            // Check if the request was created less than 14 days ago
+                            if (request.CreatedDate <= fourteenDaysAgo) {
+                                return true;
+                            }
+                }
+            }
+    
+            // If no conditions are met, return false
+            return false;
+        } catch (Exception e) {
+            System.debug('Exception: ' + e.getMessage());
+            return false;
+        }
+    }
+    //End Of method
+    // Starting method of Creating Application Access Request through community page 
+    @AuraEnabled
+    public static boolean createApplicationAccessRequest(String coworkerId,String  MVFIPatronCode,String PSFPatronCode,boolean creditCard,boolean BNSFCreditCard,
+                                                        String SRRStation, String MIDStation,boolean MVFIAccess,boolean PSFAccess,boolean ORAccess, 
+                                                        boolean SRBAccess, boolean SRRAccess,boolean MDIAccess,String additionalAccess,String comments){
+                    
+         try{
+            system.debug('useremail'+userInfo.getUserEmail());   
+            system.debug('userName'+userInfo.getName());
+            boolean result=false;
+            boolean duplicateresult=true;
+             List<Application_Access_Request__c> preventduplicatelist = new List<Application_Access_Request__c>();
+            User usr = [SELECT id, contactId from user WHERE id=:userInfo.getUserId() limit 1];
+            if(usr.contactId != null)
+            {
+            	Contact contactObj = [SELECT id,email,Name from Contact where Id =:usr.ContactId limit 1];
+                 List<Application_Access_Request__c> existingAppaccessRequest = [Select id,Additional_Applicaitons__c,Comments__c,Customer__c,Customer__r.AccountId,Coworker_ID__c,
+                                                                       Create_Or_Submit_Billing__c,Manage_Demurrage_Invoices__c,Manage_Various_Freight_Invoices__c,MDI_Stations__c,MVFI_Patron_Code__c, 
+                                                                       Order_Railcars__c,Pay_Storage_Fees__c,PSF_BNSF_Credit__c,PSF_Credit_Card__c,PSF_Patron_Code__c,SRR_Stations__c,Switch_Or_In_Release_Rail_Cars__c From Application_Access_Request__c
+                                                                       Where Customer__c =:contactObj.id];
+                system.debug('existingAppaccessRequest'+existingAppaccessRequest);  
+                List<Application_Request__c> existappreq = [Select Id,Approval_Status__c,Application_Access_Request__r.Customer__c,Application_Access_Request__r.Additional_Applicaitons__c from Application_Request__c where Application_Access_Request__r.Customer__c =: contactObj.id];
+         
+              
+                Application_Access_Request__c applicationAccessObj = new Application_Access_Request__c();
+                if(!String.isEmpty(coworkerId)){
+                    applicationAccessObj.Coworker_ID__c = coworkerId;
+                } if(!String.isEmpty(MVFIPatronCode))
+                {
+                    applicationAccessObj.MVFI_Patron_Code__c = MVFIPatronCode;
+                } if(!String.isEmpty(PSFPatronCode)){
+                    applicationAccessObj.PSF_Patron_Code__c = PSFPatronCode;
+                }
+                if(!String.isEmpty(SRRStation)){
+                    applicationAccessObj.SRR_Stations__c = SRRStation;
+                }
+                if(!String.isEmpty(MIDStation)){
+                    applicationAccessObj.MDI_Stations__c = MIDStation;
+                }
+                 if(!String.isEmpty(additionalAccess))
+                 {
+                    applicationAccessObj.Additional_Applicaitons__c = additionalAccess;
+                 } 
+                 if(!String.isEmpty(comments))
+                 {
+                    applicationAccessObj.Comments__c = comments;
+                }
+                if(contactObj != null){
+                    applicationAccessObj.Customer__c = contactObj.Id;
+                }
+                system.debug('Mustang If ended'+ applicationAccessObj.Customer__c );
+                applicationAccessObj.PSF_Credit_Card__c = creditCard;
+                applicationAccessObj.PSF_BNSF_Credit__c = BNSFCreditCard;
+                applicationAccessObj.Manage_Various_Freight_Invoices__c = MVFIAccess;
+                applicationAccessObj.Pay_Storage_Fees__c = PSFAccess;
+                applicationAccessObj.Order_Railcars__c = ORAccess;
+                applicationAccessObj.Create_Or_Submit_Billing__c = SRBAccess;
+                applicationAccessObj.Switch_Or_In_Release_Rail_Cars__c =SRRAccess;
+                applicationAccessObj.Manage_Demurrage_Invoices__c = MDIAccess;
+                applicationAccessObj.Customer__c = contactObj.id;
+               if(existingAppaccessRequest.size()>0){
+                    for(Application_Access_Request__c acr:existingAppaccessRequest){
+                        for(Application_Request__c existaccessreq:existappreq){
+                       // if(acr.Additional_Applicaitons__c == additionalAccess && acr.Customer__c ==  contactObj.Id && existaccessreq.Approval_Status__c == NUll){
+                            if(existaccessreq.Application_Access_Request__r.Additional_Applicaitons__c == additionalAccess && existaccessreq.Application_Access_Request__r.Customer__c == contactObj.Id
+                           && existaccessreq.Approval_Status__c == Null){
+                            result=false;
+                            preventduplicatelist.add(acr);
+                        }
+                    }
+                    }
+                } 
+                if(applicationAccessObj != null && preventduplicatelist.size() == 0){
+				   system.debug('appilcationAccessObj'+applicationAccessObj);
+                   insert applicationAccessObj;
+                   result=true;
+                    
+                }
+               
+            }
+            return result;
+        }catch(Exception e){
+            system.debug('Error Message'+e.getMessage());
+            return null;
+        }
+    } 
+    
+   
+    //End of method Creating Application Access Request through community page
+}
