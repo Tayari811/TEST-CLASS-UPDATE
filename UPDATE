@@ -1,0 +1,75 @@
+@isTest
+public class LQ_MultiSelectLookupControllerTest {
+
+    static testMethod void testIsValidBNSFId() {
+        // Test with a valid BNSF ID
+        String validBNSFID = 'AUTOTEST';
+        List<my_apps__x> output = LQ_MultiSelectLookupController.isValidBNSFId(validBNSFID);
+        System.assertNotEquals(0, output.size(), 'Expected valid BNSF ID to return some results.');
+
+        // Test with an invalid BNSF ID
+        String invalidBNSFID = 'Dummy';
+        try {
+            output = LQ_MultiSelectLookupController.isValidBNSFId(invalidBNSFID);
+            System.assert(false, 'Expected an AuraHandledException for an invalid BNSF ID');
+        } catch (AuraHandledException e) {
+            System.assert(e.getMessage().contains('Please Enter valid BNSF Id'), 'Expected exception for invalid BNSF ID');
+        }
+    }
+
+    static testMethod void testGetAdditionalApplication() {
+        // Ensure that this method returns a list of applications
+        List<BNSF_Application__c> additionalAppList = LQ_MultiSelectLookupController.getAdditionalApplication();
+        System.assertNotEquals(null, additionalAppList, 'Expected additional application list to be non-null.');
+    }
+
+    static testMethod void testCheckApplicationAccessRequest() {
+        // Setting up test data
+        Contact contact = new Contact(
+            FirstName = 'Test',
+            LastName = 'User',
+            MyBNSF_ID__c = 'AUTOTEST'
+        );
+        insert contact;
+
+        Application_Access_Request__c accessRequest = new Application_Access_Request__c(
+            Customer__c = contact.Id,
+            Manage_Various_Freight_Invoices__c = true,
+            CreatedDate = Date.today().addDays(-10)
+        );
+        insert accessRequest;
+
+        // Run method and validate result
+        Boolean hasRequest = LQ_MultiSelectLookupController.checkApplicationAccessRequest('Account Status');
+        System.assertEquals(true, hasRequest, 'Expected access request to exist and be recent.');
+    }
+
+    static testMethod void testCreateApplicationAccessRequest() {
+        // Set up Account, Contact, and User
+        Account account = new Account(Name = 'Test Account');
+        insert account;
+
+        Contact contact = new Contact(
+            FirstName = 'Test',
+            LastName = 'User',
+            AccountId = account.Id,
+            MyBNSF_ID__c = 'AUTOTEST',
+            Email = 'test@example.com'
+        );
+        insert contact;
+
+        // Run test with a System Administrator user context
+        User adminUser = [SELECT Id FROM User WHERE Profile.Name = 'System Administrator' LIMIT 1];
+        System.runAs(adminUser) {
+            Boolean result = LQ_MultiSelectLookupController.createApplicationAccessRequest(
+                'AUTOTEST', '0165550001,0373322323', '', false, false, 'B R SIDING,WI', 
+                'C JUAREZ,CI', true, true, true, true, true, true, 
+                '401k,AEI Utility-WAS6', 'Test comments'
+            );
+            System.assertEquals(true, result, 'Expected application access request creation to succeed.');
+
+            List<Application_Access_Request__c> appAccReqList = [SELECT Id FROM Application_Access_Request__c];
+            System.assertEquals(1, appAccReqList.size(), 'Expected one access request to be created.');
+        }
+    }
+}
