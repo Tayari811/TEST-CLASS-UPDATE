@@ -36,7 +36,7 @@ public class LQ_MultiSelectLookupControllerTest {
         );
         insert contact;
 
-        Date fourteenDaysAgo = Date.today().addDays(-14);
+       Date fourteenDaysAgo = Date.today().addDays(-14);
 
         // Case 1: Test for 'Account Status' with Manage_Various_Freight_Invoices__c set
         insert new Application_Access_Request__c(Customer__c = contact.Id, Manage_Various_Freight_Invoices__c = true, CreatedDate = fourteenDaysAgo);
