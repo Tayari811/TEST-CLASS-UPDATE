@@ -1,0 +1,82 @@
+@isTest
+public class LQ_MultiSelectLookupControllerTest {
+	static testMethod void testInValidBNSFId()
+    {
+        String invalidBNSFID = 'Dummy';
+        String validBNSFID = 'AUTOTEST';
+        
+        try
+        {
+            List<my_apps__x> output = LQ_MultiSelectLookupController.isValidBNSFId(validBNSFID);
+            system.assert(true,output.size()>1);
+        	LQ_MultiSelectLookupController.isValidBNSFId(invalidBNSFID);
+        }
+        catch (AuraHandledException e)
+        {
+            System.assert(true,e.getMessage().contains('Please Enter valid BNSF Id'));
+        }
+    }
+    static testMethod void testGetAdditionalApplication()
+    {
+    	    List<BNSF_Application__c> additionalAppList = new List<BNSF_Application__c>();
+            additionalAppList=LQ_MultiSelectLookupController.getAdditionalApplication();
+        	System.assert(true,additionalAppList);
+    }
+    /*static testMethod void createApplicationAccessRequestTest(){
+        Set<String> customerUserTypes = new Set<String> {'CSPLiteUser', 'PowerPartner', 'PowerCustomerSuccess',   'CustomerSuccess'};
+        Account acc = new Account (
+        Name = 'newAcc1'
+        );  
+        insert acc;
+        Contact con = new Contact (
+        AccountId = acc.id,
+        FirstName ='Test',
+        LastName = 'portalTestUser',
+        Status_NG__c = 'Inactive',
+        MyBNSF_ID__c = 'Autotest',
+        email='pb@ff.com'
+        );
+        insert con;
+        //User thisUser = [ select Id from User where Id = :UserInfo.getUserId() ];
+        User AdminUser = [SELECT Id FROM User WHERE Profile.name='System Administrator' AND IsActive=true LIMIT 1];
+        System.runAs ( AdminUser ) {
+            UserRole ur = [Select Id, PortalType, PortalAccountId From UserRole where PortalType ='CustomerPortal' limit 1];
+            Profile p = [select Id,name from Profile where UserType in :customerUserTypes limit 1];
+            User newUser = new User(
+            UserRoleId = ur.Id,
+            profileId = p.id,
+            username = 'newUser@yahoo.com',
+            email = 'pb@ff.com',
+            emailencodingkey = 'UTF-8',
+            localesidkey = 'en_US',
+            languagelocalekey = 'en_US',
+            timezonesidkey = 'America/Los_Angeles',
+            alias='nuser',
+            lastname='lastname',
+            FederationIdentifier='Autotest',
+            contactId = con.id
+            );
+            insert newUser;  
+        }
+        String coworkerId ='AUTOTEST';
+        String  MVFIPatronCode='0165550001,0373322323';
+        String PSFPatronCode='';
+        boolean creditCard=false;
+        boolean BNSFCreditCard=false;
+        String SRRStation='B R SIDING,WI'; String MIDStation='C JUAREZ,CI';
+        boolean MVFIAccess=true;boolean PSFAccess=true;
+        boolean ORAccess=true;
+        boolean SRBAccess=true; boolean SRRAccess=true;
+        boolean MDIAccess=true;String additionalAccess='401k,AEI Utility-WAS6';
+        String comments='test';
+        Test.startTest();
+        User userRunAS = [Select Id from User WHERE email = 'pb@ff.com'];
+        System.runAs ( userRunAS ) {
+        LQ_MultiSelectLookupController.createApplicationAccessRequest(coworkerId, MVFIPatronCode, PSFPatronCode, creditCard, BNSFCreditCard, SRRStation, MIDStation,
+                                                                      MVFIAccess, PSFAccess, ORAccess, SRBAccess, SRRAccess, MDIAccess, additionalAccess, comments);
+        }
+        Test.stopTest();
+        List<Application_Access_Request__c> appAccReqList = [Select id,name from Application_Access_Request__c];
+        system.assertEquals(1,appAccReqList.size());
+    }*/
+}
