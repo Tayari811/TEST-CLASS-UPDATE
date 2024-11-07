@@ -27,7 +27,7 @@ public class LQ_MultiSelectLookupControllerTest {
         System.assertNotEquals(null, additionalAppList, 'Expected additional application list to be non-null.');
     }
 
-    static testMethod void testCheckApplicationAccessRequest() {
+     static testMethod void testCheckApplicationAccessRequest() {
         // Set up a contact for the access requests
         Contact contact = new Contact(
             FirstName = 'Test',
@@ -36,40 +36,45 @@ public class LQ_MultiSelectLookupControllerTest {
         );
         insert contact;
 
-         Date fourteenDaysAgo = Date.today().addDays(-14);
+        // Ensure the test is run in a System context to bypass sharing rules if necessary
+        User adminUser = [SELECT Id FROM User WHERE Profile.Name = 'System Administrator' LIMIT 1];
+        System.runAs(Admin) {
 
-        // Case 1: Test for 'Account Status' with Manage_Various_Freight_Invoices__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Manage_Various_Freight_Invoices__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Account Status'), 'Expected Account Status condition to be true.');
+            Date fourteenDaysAgo = Date.today().addDays(-14);
 
-        // Case 2: Test for 'Intermodal Storage' with Pay_Storage_Fees__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Pay_Storage_Fees__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Intermodal Storage'), 'Expected Intermodal Storage condition to be true.');
+            // Case 1: Test for 'Account Status' with Manage_Various_Freight_Invoices__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Manage_Various_Freight_Invoices__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Account Status'), 'Expected Account Status condition to be true.');
 
-        // Case 3: Test for 'Railcar Equipment Request' with Order_Railcars__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Order_Railcars__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Railcar Equipment Request'), 'Expected Railcar Equipment Request condition to be true.');
+            // Case 2: Test for 'Intermodal Storage' with Pay_Storage_Fees__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Pay_Storage_Fees__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Intermodal Storage'), 'Expected Intermodal Storage condition to be true.');
 
-        // Case 4: Test for 'Railcar Management Tool' with Order_Railcars__c set
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Railcar Management Tool'), 'Expected Railcar Management Tool condition to be true.');
+            // Case 3: Test for 'Railcar Equipment Request' with Order_Railcars__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Order_Railcars__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Railcar Equipment Request'), 'Expected Railcar Equipment Request condition to be true.');
 
-        // Case 5: Test for 'Shipping Instructions' with Create_Or_Submit_Billing__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Create_Or_Submit_Billing__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Shipping Instructions'), 'Expected Shipping Instructions condition to be true.');
+            // Case 4: Test for 'Railcar Management Tool' with Order_Railcars__c set
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Railcar Management Tool'), 'Expected Railcar Management Tool condition to be true.');
 
-        // Case 6: Test for 'Shipping Instructions Hazardous' with Create_Or_Submit_Billing__c set
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Shipping Instructions Hazardous'), 'Expected Shipping Instructions Hazardous condition to be true.');
+            // Case 5: Test for 'Shipping Instructions' with Create_Or_Submit_Billing__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Create_Or_Submit_Billing__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Shipping Instructions'), 'Expected Shipping Instructions condition to be true.');
 
-        // Case 7: Test for 'Switch Or In Release Rail Cars' with Switch_Or_In_Release_Rail_Cars__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Switch_Or_In_Release_Rail_Cars__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Switch Or In Release Rail Cars'), 'Expected Switch Or In Release Rail Cars condition to be true.');
+            // Case 6: Test for 'Shipping Instructions Hazardous' with Create_Or_Submit_Billing__c set
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Shipping Instructions Hazardous'), 'Expected Shipping Instructions Hazardous condition to be true.');
 
-        // Case 8: Test for 'Customer Dwell Management Tool' with Manage_Demurrage_Invoices__c set
-        insert new Application_Access_Request__c(Customer__c = contact.Id, Manage_Demurrage_Invoices__c = true, CreatedDate = fourteenDaysAgo);
-        System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Customer Dwell Management Tool'), 'Expected Customer Dwell Management Tool condition to be true.');
+            // Case 7: Test for 'Switch Or In Release Rail Cars' with Switch_Or_In_Release_Rail_Cars__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Switch_Or_In_Release_Rail_Cars__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Switch Or In Release Rail Cars'), 'Expected Switch Or In Release Rail Cars condition to be true.');
 
-        // Case 9: Test with no matching conditions to confirm false return
-        System.assertEquals(false, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Nonexistent Access'), 'Expected non-matching condition to return false.');
+            // Case 8: Test for 'Customer Dwell Management Tool' with Manage_Demurrage_Invoices__c set
+            insert new Application_Access_Request__c(Customer__c = contact.Id, Manage_Demurrage_Invoices__c = true, CreatedDate = fourteenDaysAgo);
+            System.assertEquals(true, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Customer Dwell Management Tool'), 'Expected Customer Dwell Management Tool condition to be true.');
+
+            // Case 9: Test with no matching conditions to confirm false return
+            System.assertEquals(false, LQ_MultiSelectLookupController.checkApplicationAccessRequest('Nonexistent Access'), 'Expected non-matching condition to return false.');
+        }
     }
 
     static testMethod void testCreateApplicationAccessRequest() {
@@ -88,7 +93,7 @@ public class LQ_MultiSelectLookupControllerTest {
 
         // Run test in a specific user context
         User adminUser = [SELECT Id FROM User WHERE Profile.Name = 'System Administrator' LIMIT 1];
-        System.runAs(adminUser) {
+        System.runAs(Admin) {
             // Case 1: Create access request with all valid inputs
             Boolean result = LQ_MultiSelectLookupController.createApplicationAccessRequest(
                 'AUTOTEST', '0165550001,0373322323', '', false, false, 'B R SIDING,WI', 
